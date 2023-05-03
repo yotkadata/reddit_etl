@@ -13,7 +13,7 @@ from requests.auth import HTTPBasicAuth
 
 def auth_get_token(auth_info):
     """
-    Function to request a temporary access token
+    Function to request a temporary access token.
     """
 
     basic_auth = HTTPBasicAuth(
@@ -40,7 +40,12 @@ def auth_get_token(auth_info):
 
 
 def get_reddits(auth_info, topic="Berlin"):
+    """
+    Function to get Reddit posts using the API.
+    """
+
     print("Start downloading posts form Reddit via API.\n")
+
     # Get access token and add it to header
     token_type, access_token = auth_get_token(auth_info)
     conf["headers"]["Authorization"] = token_type + " " + access_token
@@ -62,6 +67,10 @@ def get_reddits(auth_info, topic="Berlin"):
 
 
 def write_to_mongodb(full_response):
+    """
+    Function to write posts to MongoDB
+    """
+
     print("Create connection to MongoDB.\n")
 
     # Create a connection to the MongoDB database server
@@ -106,7 +115,6 @@ def write_to_mongodb(full_response):
 
 def main():
     reddits = get_reddits(conf, topic="Berlin")
-
     write_to_mongodb(reddits["data"]["children"])
 
 
