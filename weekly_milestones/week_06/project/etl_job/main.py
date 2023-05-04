@@ -28,8 +28,8 @@ def extract():
     Function to extract Reddits from MongoDB.
     """
 
-    # Take a moment to wait for MongoDB
-    # time.sleep(10)
+    # Take a moment to wait for the reddit collector to finish
+    time.sleep(5)
 
     # Establish a connection to the MongoDB server
     client = pymongo.MongoClient(host="mongodb", port=27017)

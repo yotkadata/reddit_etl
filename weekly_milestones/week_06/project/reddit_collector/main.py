@@ -39,31 +39,44 @@ def auth_get_token(auth_info):
     return response["token_type"], response["access_token"]
 
 
-def get_reddits(auth_info, topic="Berlin"):
+def get_reddits(auth_info, topics=None):
     """
     Function to get Reddit posts using the API.
     """
 
-    print("Start downloading posts form Reddit via API.\n")
+    responses = []
 
-    # Get access token and add it to header
-    token_type, access_token = auth_get_token(auth_info)
-    conf["headers"]["Authorization"] = token_type + " " + access_token
+    if not topics:
+        print("No topics provided.")
+        return responses
 
-    # Send a get request to download the latest (new) subreddits using the new headers.
-    url = f"https://oauth.reddit.com/r/{topic}/new"  # You could also select ".../hot" to fetch the most popular posts.
+    # Convert to list if topic is string
+    if isinstance(topics, str):
+        topics = [topics]
 
-    # Start GET request
-    print("Starting GET request")
-    response = requests.get(
-        url=url,
-        headers=conf["headers"],
-        params={"limit": 25},
-    ).json()
+    for topic in topics:
+        print(f"Start downloading reddits for topic {topic}\n")
 
-    print(f"Done. Received {len(response['data']['children'])} posts.\n")
+        # Get access token and add it to header
+        token_type, access_token = auth_get_token(auth_info)
+        conf["headers"]["Authorization"] = token_type + " " + access_token
 
-    return response
+        # Send a get request to download the latest (new) subreddits using the new headers.
+        url = f"https://oauth.reddit.com/r/{topic}/new"  # You could also select ".../hot" to fetch the most popular posts.
+
+        # Start GET request
+        print("Starting GET request")
+        response = requests.get(
+            url=url,
+            headers=conf["headers"],
+            params={"limit": 50},
+        ).json()
+
+        print(f"Done. Received {len(response['data']['children'])} posts.\n")
+
+        responses.append(response)
+
+    return responses
 
 
 def write_to_mongodb(full_response):
@@ -120,8 +133,10 @@ def write_to_mongodb(full_response):
 
 
 def main():
-    reddits = get_reddits(conf, topic="Datascience")
-    write_to_mongodb(reddits["data"]["children"])
+    reddits = get_reddits(conf, topics=["Berlin", "Datascience"])
+
+    for reddit in reddits:
+        write_to_mongodb(reddit["data"]["children"])
 
 
 if __name__ == "__main__":
