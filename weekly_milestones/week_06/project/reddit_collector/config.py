@@ -1,7 +1,7 @@
 conf = {
-    "client_id": "HIU6YHyEqJ0DdfYVFiHTgA",  # "Personal use script in Reddit"
-    "secret": "PgWJZzTbUpw6DxtXGCJ8D3zUPDxFcQ",  # "Secret" in Reddit
-    "username": "yot_ka",
-    "password": "F2dmz?nWRJw!7ns6kQjt",
+    "client_id": "",  # "Personal use script in Reddit"
+    "secret": "",  # "Secret" in Reddit
+    "username": "",
+    "password": "",
     "headers": {"User-Agent": "TestAppforDocker"},
 }
