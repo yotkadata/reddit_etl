@@ -58,7 +58,7 @@ def get_reddits(auth_info, topic="Berlin"):
     response = requests.get(
         url=url,
         headers=conf["headers"],
-        params={"limit": 5},
+        params={"limit": 25},
     ).json()
 
     print(f"Done. Received {len(response['data']['children'])} posts.\n")
@@ -77,7 +77,7 @@ def write_to_mongodb(full_response):
     client = pymongo.MongoClient(host="mongodb")
 
     # Create/use a database
-    db = client.reddit
+    db = client.reddit_posts
 
     # Define the collection (like a table)
     collection = db.posts
@@ -94,6 +94,11 @@ def write_to_mongodb(full_response):
             "date": post_time,
             "title": post["data"]["title"],
             "text": post["data"]["selftext"],
+            "author_id": post["data"]["author_fullname"],
+            "author": post["data"]["author"],
+            "url": post["data"]["url"],
+            "upvote_ratio": post["data"]["upvote_ratio"],
+            "num_comments": post["data"]["num_comments"],
         }
 
         # Insert the post into the collection (like INSERT INTO posts VALUES (....);)
