@@ -3,6 +3,7 @@ import time
 
 import pymongo
 from sqlalchemy import create_engine, text
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 
 def clean_corpus(text):
@@ -28,7 +29,7 @@ def extract():
     """
 
     # Take a moment to wait for MongoDB
-    time.sleep(10)
+    # time.sleep(10)
 
     # Establish a connection to the MongoDB server
     client = pymongo.MongoClient(host="mongodb", port=27017)
@@ -47,9 +48,15 @@ def transform(posts):
     Function to transform the data.
     """
 
+    # Instanciate sentiment analyzer
+    s = SentimentIntensityAnalyzer()
+
     for post in posts:
         post["text"] = clean_corpus(post["text"])
-        post["score"] = 1.0  # Placeholder
+
+        # Calculate sentiment intensity
+        sentiment = s.polarity_scores(post["text"])
+        post["score"] = sentiment["compound"]
 
     return posts
 
@@ -74,6 +81,7 @@ def load(posts):
         id VARCHAR(32) PRIMARY KEY,
         date TIMESTAMP,
         sub_id VARCHAR(32),
+        subreddit VARCHAR(32),
         author_id VARCHAR(32),
         author VARCHAR(32),
         title TEXT,
@@ -95,14 +103,15 @@ def load(posts):
         insert = text(
             """
                 INSERT INTO posts (
-                    id, date, sub_id, author_id, author, title, text, url, upvote_ratio, num_comments, sentiment
+                    id, date, sub_id, subreddit, author_id, author, title, text, url, upvote_ratio, num_comments, sentiment
                     ) 
                 VALUES (
-                    :id, :date, :sub_id, :author_id, :author, :title, :text, :url, :upvote_ratio, :num_comments, :sentiment
+                    :id, :date, :sub_id, :subreddit, :author_id, :author, :title, :text, :url, :upvote_ratio, :num_comments, :sentiment
                     )
                 ON CONFLICT (id) DO UPDATE 
                     SET date = excluded.date,
                         sub_id = excluded.sub_id,
+                        subreddit = excluded.subreddit,
                         author_id = excluded.author_id,
                         author = excluded.author,
                         title = excluded.title,
@@ -121,6 +130,7 @@ def load(posts):
                 "id": post["_id"],
                 "date": post["date"],
                 "sub_id": post["sub_id"],
+                "subreddit": post["subreddit"],
                 "author_id": post["author_id"],
                 "author": post["author"],
                 "title": post["title"],
@@ -136,6 +146,7 @@ def load(posts):
 
 def main():
     load(transform(extract()))
+    # transform(extract())
 
 
 if __name__ == "__main__":

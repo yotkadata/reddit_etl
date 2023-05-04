@@ -2,3 +2,4 @@ pymongo
 SQLAlchemy
 psycopg2
 pandas
+vaderSentiment

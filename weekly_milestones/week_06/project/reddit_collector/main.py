@@ -91,6 +91,7 @@ def write_to_mongodb(full_response):
         key = {"_id": post["data"]["id"]}
         data = {
             "sub_id": post["data"]["subreddit_id"],
+            "subreddit": post["data"]["subreddit"],
             "date": post_time,
             "title": post["data"]["title"],
             "text": post["data"]["selftext"],
@@ -119,7 +120,7 @@ def write_to_mongodb(full_response):
 
 
 def main():
-    reddits = get_reddits(conf, topic="Berlin")
+    reddits = get_reddits(conf, topic="Datascience")
     write_to_mongodb(reddits["data"]["children"])
 
 
