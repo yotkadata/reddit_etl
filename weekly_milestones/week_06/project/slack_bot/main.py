@@ -1,3 +1,4 @@
+import logging
 import time
 
 import requests
@@ -53,7 +54,7 @@ def prepare_slack_message(post):
     emoji = ":smiley:" if post["sentiment"] > 0 else ":face_with_symbols_on_mouth:"
 
     slack_message = f"""
-        There is something spicy :chili: going on in this Reddit (sentiment: {post["sentiment"]} {emoji}):
+        There is something spicy going on in this Reddit (sentiment: {post["sentiment"]} {emoji}):
 
         *{post["title"]}*
 
@@ -64,13 +65,91 @@ def prepare_slack_message(post):
     return slack_message
 
 
+def load_sentiment_list(positive=True, num_posts=5):
+    """
+    Function to get list of posts from Postgres.
+    """
+
+    pg_client_connect = pg_connect()
+
+    desc = "DESC" if positive else ""
+
+    # Select the last unsent Reddit with highest sentiment
+    query = db.text(
+        f"""
+        SELECT id, author, subreddit, title, date, sentiment, url 
+        FROM posts 
+        WHERE date > (NOW() - INTERVAL '1 DAY') 
+        ORDER BY sentiment {desc} LIMIT {num_posts}
+        """
+    )
+
+    posts = pg_client_connect.execute(query).mappings().all()
+
+    return posts
+
+
+def prepare_slack_message_list(positive=True):
+    """
+    Function to format a message with a list for Slack.
+    """
+
+    posts = load_sentiment_list(positive, num_posts=5)
+
+    message_list = []
+    subreddits = []
+
+    for post in posts:
+        m = (
+            f"*<{post['url']}|{post['title']}>*"
+            + "\n"
+            + f"_*Score: {post['sentiment']}*, published on {post['date']} by {post['author']} in r/{post['subreddit']}_"
+            + "\n\n"
+        )
+        message_list.append(m.lstrip())
+        subreddits.append(post["subreddit"])
+
+    subreddits = ", ".join(list(set(subreddits)))
+
+    sentiment_type = "positive" if positive else "negative"
+
+    message = (
+        f"Most *{sentiment_type}* Reddits in _{subreddits}_ in the last 24 hours:  "
+        + "\n\n"
+        + "  ".join(message_list)
+    )
+
+    if len(message) >= 3000:
+        logging.error(
+            f"Message is too long (max. 3.000 characters, was: {len(message)})"
+        )
+        message = message[:2999]
+
+    return message
+
+
 def send_slack_message(message, webhook_url):
     """
     Function to send a Slack message.
     """
 
-    res = requests.post(url=webhook_url, json={"text": message})
+    res = requests.post(
+        url=webhook_url,
+        headers={"Content-Type": "application/json"},
+        json={
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": message,
+                    },
+                },
+            ],
+        },
+    )
 
+    print(res.status_code)
     if res.status_code == 200:
         return True
 
@@ -96,9 +175,10 @@ def set_slacked(post_id):
     pg_client_connect.commit()
 
 
-def main():
-    # Wait for the other jobs to finish
-    time.sleep(10)
+def slack_one():
+    """
+    Function to post the Reddit with the highest/lowest sentiment score.
+    """
 
     # Get posts from Postgres
     post = load_last_sentiment_post()
@@ -112,6 +192,37 @@ def main():
     # Set sent status
     if message_sent:
         set_slacked(post["id"])
+        return True
+
+    return False
+
+
+def slack_list(type="positive"):
+    """
+    Function to post a list of Reddits.
+    """
+
+    positive = True if type == "positive" else False
+
+    # Prepare the slack message
+    slack_message = prepare_slack_message_list(positive=positive)
+
+    # Send it
+    message_sent = send_slack_message(slack_message, conf["webhook_url"])
+
+    # Set sent status
+    if message_sent:
+        return True
+
+    return False
+
+
+def main():
+    # Wait for the other jobs to finish
+    time.sleep(15)
+
+    slack_one()
+    slack_list()
 
 
 if __name__ == "__main__":

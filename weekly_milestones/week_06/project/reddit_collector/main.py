@@ -134,7 +134,11 @@ def write_to_mongodb(full_response):
 
 
 def main():
-    reddits = get_reddits(conf, topics=["Datascience"], num_posts=5)
+    reddits = get_reddits(
+        conf,
+        topics=["datascience", "artificialinteligence", "dataanalysis", "python"],
+        num_posts=100,
+    )
 
     for reddit in reddits:
         write_to_mongodb(reddit["data"]["children"])
