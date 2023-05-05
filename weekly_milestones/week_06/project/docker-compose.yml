@@ -29,7 +29,9 @@ services:
       - POSTGRES_PASSWORD=12345678
       - POSTGRES_DB=reddit_posts
 
-
-  # 5th container
-  #slackbot:
-  # build:
+  slackbot:
+    build: ./slack_bot/
+    volumes:
+      - ./slack_bot:/app
+    depends_on:
+      - postgresdb

@@ -4,6 +4,7 @@ and inserts them to a MongoDB.
 """
 
 import datetime as dt
+import logging
 
 import pymongo
 import requests
@@ -30,16 +31,16 @@ def auth_get_token(auth_info):
     # Start POST request for access token
     url = "https://www.reddit.com/api/v1/access_token"
 
-    print("Get temporary access token.")
+    logging.info("Get temporary access token.")
     response = requests.post(
         url=url, headers=auth_info["headers"], data=data, auth=basic_auth
     ).json()
-    print("Done.\n")
+    logging.info("Done.\n")
 
     return response["token_type"], response["access_token"]
 
 
-def get_reddits(auth_info, topics=None):
+def get_reddits(auth_info, topics=None, num_posts=25):
     """
     Function to get Reddit posts using the API.
     """
@@ -47,7 +48,7 @@ def get_reddits(auth_info, topics=None):
     responses = []
 
     if not topics:
-        print("No topics provided.")
+        logging.critical("No topics provided.")
         return responses
 
     # Convert to list if topic is string
@@ -55,7 +56,7 @@ def get_reddits(auth_info, topics=None):
         topics = [topics]
 
     for topic in topics:
-        print(f"Start downloading reddits for topic {topic}\n")
+        logging.info(f"Start downloading reddits for topic {topic}\n")
 
         # Get access token and add it to header
         token_type, access_token = auth_get_token(auth_info)
@@ -65,14 +66,14 @@ def get_reddits(auth_info, topics=None):
         url = f"https://oauth.reddit.com/r/{topic}/new"  # You could also select ".../hot" to fetch the most popular posts.
 
         # Start GET request
-        print("Starting GET request")
+        logging.info("Starting GET request")
         response = requests.get(
             url=url,
             headers=conf["headers"],
-            params={"limit": 50},
+            params={"limit": num_posts},
         ).json()
 
-        print(f"Done. Received {len(response['data']['children'])} posts.\n")
+        logging.info(f"Done. Received {len(response['data']['children'])} posts.\n")
 
         responses.append(response)
 
@@ -84,7 +85,7 @@ def write_to_mongodb(full_response):
     Function to write posts to MongoDB
     """
 
-    print("Create connection to MongoDB.\n")
+    logging.info("Create connection to MongoDB.\n")
 
     # Create a connection to the MongoDB database server
     client = pymongo.MongoClient(host="mongodb")
@@ -116,24 +117,24 @@ def write_to_mongodb(full_response):
         }
 
         # Insert the post into the collection (like INSERT INTO posts VALUES (....);)
-        print("----- Writing post into MongoDB -----")
-        print(str(dt.datetime.now()))
-        print(f"{data['title'][:101]} (ID: {key['_id']})")
+        logging.info("----- Writing post into MongoDB -----")
+        logging.info(str(dt.datetime.now()))
+        logging.info(f"{data['title'][:101]} (ID: {key['_id']})")
 
         res = collection.update_one(key, {"$set": data}, upsert=True)
 
         if res.matched_count > 0:
-            print(
+            logging.info(
                 f"Post already existed in MongoDB. {'Modified.' * res.modified_count}"
             )
 
-        print("-------------------------------------\n")
+        logging.info("-------------------------------------\n")
 
-    print(f"Added {len(full_response)} posts to MongoDB.")
+    logging.info(f"Added {len(full_response)} posts to MongoDB.")
 
 
 def main():
-    reddits = get_reddits(conf, topics=["Berlin", "Datascience"])
+    reddits = get_reddits(conf, topics=["Datascience"], num_posts=5)
 
     for reddit in reddits:
         write_to_mongodb(reddit["data"]["children"])

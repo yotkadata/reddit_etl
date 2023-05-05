@@ -78,20 +78,21 @@ def load(posts):
     create_table = text(
         """
         CREATE TABLE IF NOT EXISTS posts (
-        id VARCHAR(32) PRIMARY KEY,
-        date TIMESTAMP,
-        sub_id VARCHAR(32),
-        subreddit VARCHAR(32),
-        author_id VARCHAR(32),
-        author VARCHAR(32),
-        title TEXT,
-        text TEXT,
-        url VARCHAR(250),
-        upvote_ratio NUMERIC,
-        num_comments INT,
-        sentiment NUMERIC
-    );
-    """
+            id VARCHAR(32) PRIMARY KEY,
+            date TIMESTAMP,
+            sub_id VARCHAR(32),
+            subreddit VARCHAR(32),
+            author_id VARCHAR(32),
+            author VARCHAR(32),
+            title TEXT,
+            text TEXT,
+            url VARCHAR(250),
+            upvote_ratio NUMERIC,
+            num_comments INT,
+            sentiment NUMERIC,
+            slacked INT
+        );
+        """
     )
 
     # Execute the query create_table
@@ -102,24 +103,26 @@ def load(posts):
     for post in posts:
         insert = text(
             """
-                INSERT INTO posts (
-                    id, date, sub_id, subreddit, author_id, author, title, text, url, upvote_ratio, num_comments, sentiment
-                    ) 
-                VALUES (
-                    :id, :date, :sub_id, :subreddit, :author_id, :author, :title, :text, :url, :upvote_ratio, :num_comments, :sentiment
-                    )
-                ON CONFLICT (id) DO UPDATE 
-                    SET date = excluded.date,
-                        sub_id = excluded.sub_id,
-                        subreddit = excluded.subreddit,
-                        author_id = excluded.author_id,
-                        author = excluded.author,
-                        title = excluded.title,
-                        text = excluded.text,
-                        url = excluded.url,
-                        upvote_ratio = excluded.upvote_ratio,
-                        num_comments = excluded.num_comments,
-                        sentiment = excluded.sentiment
+            INSERT INTO posts (
+                id, date, sub_id, subreddit, author_id, author, title, 
+                text, url, upvote_ratio, num_comments, sentiment, slacked
+                ) 
+            VALUES (
+                :id, :date, :sub_id, :subreddit, :author_id, :author, :title, 
+                :text, :url, :upvote_ratio, :num_comments, :sentiment, :slacked
+                )
+            ON CONFLICT (id) DO UPDATE 
+                SET date = excluded.date,
+                    sub_id = excluded.sub_id,
+                    subreddit = excluded.subreddit,
+                    author_id = excluded.author_id,
+                    author = excluded.author,
+                    title = excluded.title,
+                    text = excluded.text,
+                    url = excluded.url,
+                    upvote_ratio = excluded.upvote_ratio,
+                    num_comments = excluded.num_comments,
+                    sentiment = excluded.sentiment
             """
         )
 
@@ -139,6 +142,7 @@ def load(posts):
                 "upvote_ratio": post["upvote_ratio"],
                 "num_comments": post["num_comments"],
                 "sentiment": post["score"],
+                "slacked": 0,
             },
         )
         pg_client_connect.commit()
@@ -146,7 +150,6 @@ def load(posts):
 
 def main():
     load(transform(extract()))
-    # transform(extract())
 
 
 if __name__ == "__main__":
