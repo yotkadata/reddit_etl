@@ -74,7 +74,7 @@ def load_sentiment_list(positive=True, num_posts=5):
 
     desc = "DESC" if positive else ""
 
-    # Select the last unsent Reddit with highest sentiment
+    # Select the last n Reddits with highest/lowest sentiment
     query = db.text(
         f"""
         SELECT id, author, subreddit, title, date, sentiment, url 
@@ -210,7 +210,6 @@ def slack_list(type="positive"):
     # Send it
     message_sent = send_slack_message(slack_message, conf["webhook_url"])
 
-    # Set sent status
     if message_sent:
         return True
 
