@@ -149,6 +149,9 @@ def load(posts):
 
 
 def main():
+    # Wait for the other jobs to finish
+    time.sleep(15)
+
     load(transform(extract()))
 
 

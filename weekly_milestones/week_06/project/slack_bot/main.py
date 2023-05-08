@@ -96,6 +96,10 @@ def prepare_slack_message_list(positive=True):
 
     posts = load_sentiment_list(positive, num_posts=5)
 
+    # If no posts, return empty string
+    if len(posts) == 0:
+        return ""
+
     message_list = []
     subreddits = []
 
@@ -207,11 +211,12 @@ def slack_list(type="positive"):
     # Prepare the slack message
     slack_message = prepare_slack_message_list(positive=positive)
 
-    # Send it
-    message_sent = send_slack_message(slack_message, conf["webhook_url"])
+    # If not empty, send it
+    if not slack_message == "":
+        message_sent = send_slack_message(slack_message, conf["webhook_url"])
 
-    if message_sent:
-        return True
+        if message_sent:
+            return True
 
     return False
 
@@ -220,7 +225,7 @@ def main():
     # Wait for the other jobs to finish
     time.sleep(15)
 
-    slack_one()
+    # slack_one()
     slack_list()
 
 
