@@ -1,9 +1,16 @@
+import os
 import re
 import time
 
 import pymongo
 from sqlalchemy import create_engine, text
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+
+# Get environment variables
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_TABLE = os.getenv("POSTGRES_TABLE")
 
 
 def clean_corpus(text):
@@ -68,7 +75,8 @@ def load(posts):
 
     # Create a postgres client
     pg_client = create_engine(
-        "postgresql://postgres:12345678@postgresdb:5432/reddit_posts", echo=True
+        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgresdb:5432/{POSTGRES_DB}",
+        echo=True,
     )
 
     # Connect the client to postgres

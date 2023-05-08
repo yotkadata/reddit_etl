@@ -1,9 +1,16 @@
 import logging
+import os
 import time
 
 import requests
 import sqlalchemy as db
-from config import conf
+
+# Get environment variables
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_TABLE = os.getenv("POSTGRES_TABLE")
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
 
 def pg_connect():
@@ -13,7 +20,7 @@ def pg_connect():
 
     # Create a postgres client
     pg_client = db.create_engine(
-        f"postgresql://{conf['postgres_user']}:{conf['postgres_password']}@{conf['postgres_db']}:5432/{conf['postgres_table']}",
+        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgresdb:5432/{POSTGRES_DB}",
         echo=True,
     )
 
@@ -32,9 +39,9 @@ def load_last_sentiment_post():
 
     # Select the last unsent Reddit with highest sentiment
     query = db.text(
-        """
+        f"""
         SELECT id, subreddit, title, date, sentiment, url, author 
-        FROM posts WHERE slacked = 0 
+        FROM {POSTGRES_TABLE} WHERE slacked = 0 
         ORDER BY ABS(sentiment) DESC 
         LIMIT 1;
         """
@@ -78,7 +85,7 @@ def load_sentiment_list(positive=True, num_posts=5):
     query = db.text(
         f"""
         SELECT id, author, subreddit, title, date, sentiment, url 
-        FROM posts 
+        FROM {POSTGRES_TABLE} 
         WHERE date > (NOW() - INTERVAL '1 DAY') 
         ORDER BY sentiment {desc} LIMIT {num_posts}
         """
@@ -132,13 +139,13 @@ def prepare_slack_message_list(positive=True):
     return message
 
 
-def send_slack_message(message, webhook_url):
+def send_slack_message(message):
     """
     Function to send a Slack message.
     """
 
     res = requests.post(
-        url=webhook_url,
+        url=SLACK_WEBHOOK_URL,
         headers={"Content-Type": "application/json"},
         json={
             "blocks": [
@@ -168,8 +175,8 @@ def set_slacked(post_id):
     pg_client_connect = pg_connect()
 
     query = db.text(
-        """
-        UPDATE posts
+        f"""
+        UPDATE {POSTGRES_TABLE}
         SET slacked = 1
         WHERE id = :id;
         """
@@ -191,7 +198,7 @@ def slack_one():
     slack_message = prepare_slack_message(post)
 
     # Send it
-    message_sent = send_slack_message(slack_message, conf["webhook_url"])
+    message_sent = send_slack_message(slack_message)
 
     # Set sent status
     if message_sent:
@@ -213,8 +220,7 @@ def slack_list(type="positive"):
 
     # If not empty, send it
     if not slack_message == "":
-        message_sent = send_slack_message(slack_message, conf["webhook_url"])
-
+        message_sent = send_slack_message(slack_message)
         if message_sent:
             return True
 
@@ -225,7 +231,7 @@ def main():
     # Wait for the other jobs to finish
     time.sleep(15)
 
-    # slack_one()
+    slack_one()
     slack_list()
 
 

@@ -5,27 +5,36 @@ and inserts them to a MongoDB.
 
 import datetime as dt
 import logging
+import os
 
 import pymongo
 import requests
-from config import conf
 from requests.auth import HTTPBasicAuth
 
+# Get environment variables
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
+REDDIT_SECRET = os.getenv("REDDIT_SECRET")
+REDDIT_USER = os.getenv("REDDIT_USER")
+REDDIT_PWD = os.getenv("REDDIT_PWD")
 
-def auth_get_token(auth_info):
+# Set headers
+REDDIT_HEADERS = {"User-Agent": "TestAppforDocker"}
+
+
+def auth_get_token():
     """
     Function to request a temporary access token.
     """
 
     basic_auth = HTTPBasicAuth(
-        username=auth_info["client_id"],  # Reddit client_id
-        password=auth_info["secret"],  # Reddit "secret"
+        username=REDDIT_CLIENT_ID,  # Reddit client_id
+        password=REDDIT_SECRET,  # Reddit "secret"
     )
 
     data = dict(
         grant_type="password",
-        username=auth_info["username"],  # Reddit username
-        password=auth_info["password"],  # Reddit password
+        username=REDDIT_USER,  # Reddit username
+        password=REDDIT_PWD,  # Reddit password
     )
 
     # Start POST request for access token
@@ -33,14 +42,14 @@ def auth_get_token(auth_info):
 
     logging.info("Get temporary access token.")
     response = requests.post(
-        url=url, headers=auth_info["headers"], data=data, auth=basic_auth
+        url=url, headers=REDDIT_HEADERS, data=data, auth=basic_auth
     ).json()
     logging.info("Done.\n")
 
     return response["token_type"], response["access_token"]
 
 
-def get_reddits(auth_info, topics=None, num_posts=25):
+def get_reddits(topics=None, num_posts=25):
     """
     Function to get Reddit posts using the API.
     """
@@ -59,8 +68,8 @@ def get_reddits(auth_info, topics=None, num_posts=25):
         logging.info(f"Start downloading reddits for topic {topic}\n")
 
         # Get access token and add it to header
-        token_type, access_token = auth_get_token(auth_info)
-        conf["headers"]["Authorization"] = token_type + " " + access_token
+        token_type, access_token = auth_get_token()
+        REDDIT_HEADERS["Authorization"] = token_type + " " + access_token
 
         # Send a get request to download the latest (new) subreddits using the new headers.
         url = f"https://oauth.reddit.com/r/{topic}/new"  # You could also select ".../hot" to fetch the most popular posts.
@@ -69,7 +78,7 @@ def get_reddits(auth_info, topics=None, num_posts=25):
         logging.info("Starting GET request")
         response = requests.get(
             url=url,
-            headers=conf["headers"],
+            headers=REDDIT_HEADERS,
             params={"limit": num_posts},
         ).json()
 
@@ -135,7 +144,6 @@ def write_to_mongodb(full_response):
 
 def main():
     reddits = get_reddits(
-        conf,
         topics=["datascience", "artificialinteligence", "dataanalysis", "python"],
         num_posts=100,
     )

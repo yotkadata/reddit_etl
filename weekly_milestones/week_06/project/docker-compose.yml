@@ -6,11 +6,15 @@ services:
       - ./reddit_collector:/app
     depends_on:
       - mongodb
+    env_file:
+      - .env
 
   mongodb:
     image: mongo
     ports:
       - 27017:27017
+    env_file:
+      - .env
 
   etl_job:
     build: ./etl_job/
@@ -19,15 +23,15 @@ services:
     depends_on:
       - mongodb
       - postgresdb
+    env_file:
+      - .env
 
   postgresdb:
     image: postgres
     ports:
       - 5555:5432
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=12345678
-      - POSTGRES_DB=reddit_posts
+    env_file:
+      - .env
 
   slackbot:
     build: ./slack_bot/
@@ -35,3 +39,5 @@ services:
       - ./slack_bot:/app
     depends_on:
       - postgresdb
+    env_file:
+      - .env
