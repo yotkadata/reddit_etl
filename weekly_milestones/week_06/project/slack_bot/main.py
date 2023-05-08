@@ -229,7 +229,7 @@ def slack_list(type="positive"):
 
 def main():
     # Wait for the other jobs to finish
-    time.sleep(15)
+    time.sleep(30)
 
     slack_one()
     slack_list()
