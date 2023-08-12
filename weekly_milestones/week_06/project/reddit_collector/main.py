@@ -21,7 +21,7 @@ REDDIT_PWD = os.getenv("REDDIT_PWD")
 REDDIT_HEADERS = {"User-Agent": "TestAppforDocker"}
 
 
-def auth_get_token():
+def auth_get_token() -> tuple[str, str]:
     """
     Function to request a temporary access token.
     """
@@ -31,25 +31,25 @@ def auth_get_token():
         password=REDDIT_SECRET,  # Reddit "secret"
     )
 
-    data = dict(
-        grant_type="password",
-        username=REDDIT_USER,  # Reddit username
-        password=REDDIT_PWD,  # Reddit password
-    )
+    data = {
+        "grant_type": "password",
+        "username": REDDIT_USER,  # Reddit username
+        "password": REDDIT_PWD,  # Reddit password
+    }
 
     # Start POST request for access token
     url = "https://www.reddit.com/api/v1/access_token"
 
     logging.info("Get temporary access token.")
     response = requests.post(
-        url=url, headers=REDDIT_HEADERS, data=data, auth=basic_auth
+        url=url, headers=REDDIT_HEADERS, data=data, auth=basic_auth, timeout=30
     ).json()
     logging.info("Done.\n")
 
     return response["token_type"], response["access_token"]
 
 
-def get_reddits(topics=None, num_posts=25):
+def get_reddits(topics: list = None, num_posts: int = 25) -> list:
     """
     Function to get Reddit posts using the API.
     """
@@ -65,7 +65,7 @@ def get_reddits(topics=None, num_posts=25):
         topics = [topics]
 
     for topic in topics:
-        logging.info(f"Start downloading reddits for topic {topic}\n")
+        logging.info("Start downloading reddits for topic %s\n", topic)
 
         # Get access token and add it to header
         token_type, access_token = auth_get_token()
@@ -80,16 +80,17 @@ def get_reddits(topics=None, num_posts=25):
             url=url,
             headers=REDDIT_HEADERS,
             params={"limit": num_posts},
+            timeout=30,
         ).json()
 
-        logging.info(f"Done. Received {len(response['data']['children'])} posts.\n")
+        logging.info("Done. Received %s posts.\n", len(response["data"]["children"]))
 
         responses.append(response)
 
     return responses
 
 
-def write_to_mongodb(full_response):
+def write_to_mongodb(full_response: list) -> None:
     """
     Function to write posts to MongoDB
     """
@@ -100,10 +101,10 @@ def write_to_mongodb(full_response):
     client = pymongo.MongoClient(host="mongodb")
 
     # Create/use a database
-    db = client.reddit_posts
+    database = client.reddit_posts
 
     # Define the collection (like a table)
-    collection = db.posts
+    collection = database.posts
 
     for post in full_response:
         # Convert date
@@ -128,21 +129,24 @@ def write_to_mongodb(full_response):
         # Insert the post into the collection (like INSERT INTO posts VALUES (....);)
         logging.info("----- Writing post into MongoDB -----")
         logging.info(str(dt.datetime.now()))
-        logging.info(f"{data['title'][:101]} (ID: {key['_id']})")
+        logging.info("%s (ID: %s)", data["title"][:101], key["_id"])
 
         res = collection.update_one(key, {"$set": data}, upsert=True)
 
         if res.matched_count > 0:
             logging.info(
-                f"Post already existed in MongoDB. {'Modified.' * res.modified_count}"
+                "Post already existed in MongoDB. %s", "Modified." * res.modified_count
             )
 
         logging.info("-------------------------------------\n")
 
-    logging.info(f"Added {len(full_response)} posts to MongoDB.")
+    logging.info("Added %s posts to MongoDB.", len(full_response))
 
 
-def main():
+def main() -> None:
+    """
+    Main function to get reddits and write them to MongoDB.
+    """
     reddits = get_reddits(
         topics=["datascience", "artificialinteligence", "dataanalysis", "python"],
         num_posts=100,
