@@ -1,3 +1,8 @@
+"""
+ETL job that extracts data from MongoDB, transforms it and
+loads it into a Postgres DB.
+"""
+
 import os
 import re
 import time
@@ -13,24 +18,24 @@ POSTGRES_DB = os.getenv("POSTGRES_DB")
 POSTGRES_TABLE = os.getenv("POSTGRES_TABLE")
 
 
-def clean_corpus(text):
+def clean_corpus(corpus_text: str) -> str:
     """
     Function to clean the corpus.
     """
 
     # Remove apostrophs
-    text = text.replace("'", " ")
+    corpus_text = corpus_text.replace("'", " ")
     # Remove line breaks
-    text = text.replace("\n", "")
+    corpus_text = corpus_text.replace("\n", "")
     # Remove URLs
-    text = re.sub(r"\S*https?:\S*", "", text)
+    corpus_text = re.sub(r"\S*https?:\S*", "", corpus_text)
     # Remove HTML tags
-    text = re.sub(re.compile("<.*?>"), "", text)
+    corpus_text = re.sub(re.compile("<.*?>"), "", corpus_text)
 
-    return text
+    return corpus_text
 
 
-def extract():
+def extract() -> list:
     """
     Function to extract Reddits from MongoDB.
     """
@@ -42,33 +47,33 @@ def extract():
     client = pymongo.MongoClient(host="mongodb", port=27017)
 
     # Select the database you want to use withing the MongoDB server
-    db = client.reddit_posts
+    database = client.reddit_posts
 
     # Get all posts and return them
-    posts = list(db.posts.find())
+    posts = list(database.posts.find())
 
     return posts
 
 
-def transform(posts):
+def transform(posts: list) -> list:
     """
     Function to transform the data.
     """
 
     # Instanciate sentiment analyzer
-    s = SentimentIntensityAnalyzer()
+    sentiment_analyser = SentimentIntensityAnalyzer()
 
     for post in posts:
         post["text"] = clean_corpus(post["text"])
 
         # Calculate sentiment intensity
-        sentiment = s.polarity_scores(post["text"])
+        sentiment = sentiment_analyser.polarity_scores(post["text"])
         post["score"] = sentiment["compound"]
 
     return posts
 
 
-def load(posts):
+def load(posts: list) -> None:
     """
     Function to write the transformed data to Postgres DB.
     """
@@ -156,7 +161,10 @@ def load(posts):
         pg_client_connect.commit()
 
 
-def main():
+def main() -> None:
+    """
+    Main function to run the ETL job.
+    """
     # Wait for the other jobs to finish
     time.sleep(15)
 
