@@ -1,3 +1,7 @@
+"""
+Script to send Slack messages with results of the Reddit sentiment score.
+"""
+
 import logging
 import os
 import time
@@ -13,7 +17,7 @@ POSTGRES_TABLE = os.getenv("POSTGRES_TABLE")
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
 
-def pg_connect():
+def pg_connect() -> db.engine.base.Connection:
     """
     Function to create a connection to Postgres
     """
@@ -30,7 +34,7 @@ def pg_connect():
     return pg_client_connect
 
 
-def load_last_sentiment_post():
+def load_last_sentiment_post() -> dict:
     """
     Function to get posts from Postgres.
     """
@@ -52,7 +56,7 @@ def load_last_sentiment_post():
     return posts[0]
 
 
-def prepare_slack_message(post):
+def prepare_slack_message(post: dict) -> str:
     """
     Function to format a message for Slack.
     """
@@ -72,7 +76,7 @@ def prepare_slack_message(post):
     return slack_message
 
 
-def load_sentiment_list(positive=True, num_posts=5):
+def load_sentiment_list(positive: bool = True, num_posts: int = 5) -> list:
     """
     Function to get list of posts from Postgres.
     """
@@ -96,7 +100,7 @@ def load_sentiment_list(positive=True, num_posts=5):
     return posts
 
 
-def prepare_slack_message_list(positive=True):
+def prepare_slack_message_list(positive: bool = True) -> str:
     """
     Function to format a message with a list for Slack.
     """
@@ -111,13 +115,12 @@ def prepare_slack_message_list(positive=True):
     subreddits = []
 
     for post in posts:
-        m = (
-            f"*<{post['url']}|{post['title']}>*"
-            + "\n"
-            + f"_*Score: {post['sentiment']}*, published on {post['date']} by {post['author']} in r/{post['subreddit']}_"
-            + "\n\n"
+        message_item = (
+            f"*<{post['url']}|{post['title']}>*\n"
+            f"_*Score: {post['sentiment']}*, published on {post['date']} "
+            f"by {post['author']} in r/{post['subreddit']}_\n\n"
         )
-        message_list.append(m.lstrip())
+        message_list.append(message_item.lstrip())
         subreddits.append(post["subreddit"])
 
     subreddits = ", ".join(list(set(subreddits)))
@@ -132,14 +135,14 @@ def prepare_slack_message_list(positive=True):
 
     if len(message) >= 3000:
         logging.error(
-            f"Message is too long (max. 3.000 characters, was: {len(message)})"
+            "Message is too long (max. 3.000 characters, was: %s)", len(message)
         )
         message = message[:2999]
 
     return message
 
 
-def send_slack_message(message):
+def send_slack_message(message: str) -> bool:
     """
     Function to send a Slack message.
     """
@@ -158,6 +161,7 @@ def send_slack_message(message):
                 },
             ],
         },
+        timeout=30,
     )
 
     print(res.status_code)
@@ -167,7 +171,7 @@ def send_slack_message(message):
     return False
 
 
-def set_slacked(post_id):
+def set_slacked(post_id: int) -> None:
     """
     Function to set a Reddit as 'slacked' after sending it.
     """
@@ -186,7 +190,7 @@ def set_slacked(post_id):
     pg_client_connect.commit()
 
 
-def slack_one():
+def slack_one() -> bool:
     """
     Function to post the Reddit with the highest/lowest sentiment score.
     """
@@ -208,18 +212,18 @@ def slack_one():
     return False
 
 
-def slack_list(type="positive"):
+def slack_list(sentiment_type: str = "positive") -> bool:
     """
     Function to post a list of Reddits.
     """
 
-    positive = True if type == "positive" else False
+    positive = True if sentiment_type == "positive" else False
 
     # Prepare the slack message
     slack_message = prepare_slack_message_list(positive=positive)
 
     # If not empty, send it
-    if not slack_message == "":
+    if slack_message != "":
         message_sent = send_slack_message(slack_message)
         if message_sent:
             return True
@@ -227,7 +231,10 @@ def slack_list(type="positive"):
     return False
 
 
-def main():
+def main() -> None:
+    """
+    Main function.
+    """
     # Wait for the other jobs to finish
     time.sleep(30)
 
