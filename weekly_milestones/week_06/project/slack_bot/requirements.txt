@@ -1,4 +1,2 @@
-psycopg2
-pyjokes
-requests
-sqlalchemy
+Requests==2.31.0
+SQLAlchemy==2.0.11
