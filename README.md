@@ -8,11 +8,9 @@ In this project, I built an ETL pipeline with multiple steps:
 2. **Transform Reddit posts:** An ETL job extracts data from MongoDB, transforms it including Sentiment Analysis, and loads it into a PostgreSQL database. (see directory `etl_job`)
 3. **Publish selected posts in Slack:** In the last step, data on the posts including results of the Sentiment Analysis are loaded and sent as Slack messages. (see directory `slack_bot`)
 
-The whole pipeline runs using **Docker** and **Docker Compose**.
-
 ### Run the process
 
-To run the process you need to:
+The whole pipeline runs using **Docker** and **Docker Compose**. To run it you need to:
 
 1. Have Docker and Docker Compose installed
 2. Have a Reddit account and create a "secret" for the API.
