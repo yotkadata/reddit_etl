@@ -6,9 +6,9 @@ In this project, I built an ETL pipeline with multiple steps:
 
 1. **Collect posts from Reddit:** A script gets Reddits from the Reddit API and inserts them to a MongoDB. (see directory `reddit_collector`)
 2. **Transform Reddit posts:** An ETL job extracts data from MongoDB, transforms it including Sentiment Analysis, and loads it into a PostgreSQL database. (see directory `etl_job`)
-3. **Publish selected posts in Slack:** In the last step, data on the posts including results of the Sentiment Analysis are loaded and sent as Slack messages.
+3. **Publish selected posts in Slack:** In the last step, data on the posts including results of the Sentiment Analysis are loaded and sent as Slack messages. (see directory `slack_bot`)
 
-The whole process runs using **Docker** and **Docker Compose**.
+The whole pipeline runs using **Docker** and **Docker Compose**.
 
 ### Run the process
 
@@ -36,7 +36,7 @@ REDDIT_USER=""
 REDDIT_PWD=""
 ```
 
-Then yo clone the repository, build the Docker images using Docker Compose, and run it:
+Then you clone the repository, build the Docker images using Docker Compose, and run it:
 
 ```bash
 git clone https://github.com/yotkadata/reddit_etl.git
@@ -47,7 +47,7 @@ docker-compose up -d
 
 Skip the `-d` parameter in `docker-compose run` to se output in terminal and not run it in the background.
 
-To see the content of the MongoDB or the PostgreSQL database, you can attach to one of the running processes. First, get the name of the process by showing all running containers:
+To see the content of the MongoDB or the PostgreSQL database, you can attach to one of the running containers. First, get the name of the process by showing all running containers:
 
 ```bash
 docker-compose ps
@@ -74,7 +74,7 @@ db.posts.countDocuments()
 db.posts.find().pretty()
 ```
 
-Similarly, you can access the PostgreSQL database and inspect its content in the postgres shell:
+Similarly, you can access the PostgreSQL database and inspect its content in the psql shell:
 
 ```
 docker exec -it <CONTAINER_NAME> psql -p 5432 -U postgres
